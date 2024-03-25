@@ -1,0 +1,32 @@
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{"email": "admin@email.com", "password": "matan311"}
+
+###
+
+POST http://127.0.0.1:8000/api/token/refresh/
+Content-Type: application/json 
+
+
+{"refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTcxMzM2Mjc0OCwiaWF0IjoxNzEwNzcwNzQ4LCJqdGkiOiIxYjJlN2ViNzE3MjI0NWYyYmQwOGYwNDQyNTdkZGRlOSIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoiYWRtaW4iLCJpc19zdGFmZiI6dHJ1ZX0.FCJ1vPdccTP7oxuq0VK43hy2HV9B0Zkmu-ZGxsRUaU4"}
+
+### 
+
+POST http://127.0.0.1:8000/logout
+Content-Type: application/json
+Authorization: Token c1cb8caa7c58ca35866d61b34bd0854d1589ea78  
+
+{}
+
+###
+
+POST http://127.0.0.1:8000/api/get-titles/
+Content-Type: application/json
+Authorization: Token 
+
+{}
+### 
+
+GET http://127.0.0.1:8000/api/get-tmdb-search/?search-term=fight
+Authorization: Token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzEwNzcxMzUyLCJpYXQiOjE3MTA3NzEwNTIsImp0aSI6IjA2NDIzNzUzYWI5MjQxODg5ZGZmMDAxZTkzNTRmNmRlIiwidXNlcl9pZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImlzX3N0YWZmIjp0cnVlfQ.RQm0p54rI2ZipugIaP8qto4o-Xr61OQpgyNaWNdGYwA

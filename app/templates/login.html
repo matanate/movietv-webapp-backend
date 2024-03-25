@@ -1,0 +1,18 @@
+{% extends "base.html" %} {% block head_title %}Login - AtMDB{% endblock %} {%
+block body %}{{ super() }}
+<main class="form-signin w-100 m-auto">
+  <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-floating">
+      {{ form.InputEmail }}
+      <label for="{{ form.InputEmail.id_for_label }}">Email address</label>
+    </div>
+    <div class="form-floating">
+      {{ form.InputPassword }}
+      <label for="{{ form.InputPassword.id_for_label }}">Password</label>
+    </div>
+    <button class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
+  </form>
+</main>
+{% endblock %}
