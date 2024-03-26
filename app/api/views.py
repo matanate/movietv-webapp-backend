@@ -10,14 +10,16 @@ from rest_framework.decorators import (
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.utils import timezone
+from django.db.models import Q
+from django.db.models.functions import ExtractYear
 from app.models import Title, Review, Genre
 from .serializers import (
     UserSerializer,
     TitlesSerializer,
     ReviewsSerializer,
     UpdateReviewsSerializer,
+    GenreSerializer,
 )
-
 from django.contrib.auth import get_user_model
 import requests
 import os
@@ -85,37 +87,98 @@ def get_titles(request):
         movie_or_tv = request.data.get("movie_or_tv", "all")
         title_per_page = request.data.get("title_per_page", 10)
         page_number = request.data.get("page_number", 1)
+        genres = request.data.get("genres", None)
+        ratings = request.data.get("ratings", None)
+        years = request.data.get("years", None)
 
-        # Query titles based on search term and movie_or_tv
+        titles_query = Title.objects.all()
+
+        # Filter titles based on search term
         if search_term:
-            if movie_or_tv == "all":
-                titles_query = Title.objects.filter(title__icontains=search_term)
-            else:
-                titles_query = Title.objects.filter(
-                    movie_or_tv=movie_or_tv, title__icontains=search_term
-                )
+            titles_query = titles_query.filter(title__icontains=search_term)
+
+        # Filter titles based on movie_or_tv
+        if movie_or_tv != "all":
+            titles_query = titles_query.filter(movie_or_tv=movie_or_tv)
+
+        # Filter titles by genres if genres list is provided
+        if genres and not genres is None:
+            titles_query = titles_query.filter(genres__id__in=genres)
+
+        # Filter titles by ratings if ratings list is provided
+        if ratings and not ratings is None:
+            q_objects = Q()
+            for rating in ratings:
+                if rating == 10:  # If rating is 10, just filter for 10
+                    q_objects |= Q(rating=rating)
+                else:  # For other ratings, create a range query
+                    q_objects |= Q(rating__range=(rating, rating + 0.99))
+
+            titles_query = titles_query.filter(q_objects)
+
+        # Filter titles by years if years list is provided
+        if years and not years is None:
+            q_objects = Q()
+            for year in years:
+                q_objects |= Q(release_date__year=year)
+
+            titles_query = titles_query.filter(q_objects)
+
+        # Apply ordering
+        if is_ascending:
+            order_by = f"-{order_by}"
         else:
-            if movie_or_tv == "all":
-                titles_query = Title.objects.all()
-            else:
-                titles_query = Title.objects.filter(movie_or_tv=movie_or_tv)
+            order_by = f"{order_by}"
 
         # Calculate total number of titles and pages
         total_titles = titles_query.count()
         total_pages = ceil(total_titles / title_per_page)
 
-        # Apply ordering, pagination, and serialization
-        if is_ascending:
-            order_by = "-" + order_by
-
-        titles = titles_query.order_by(f"{order_by}")[
+        # Perform pagination
+        titles = titles_query.order_by(order_by)[
             (page_number - 1) * title_per_page : page_number * title_per_page
         ]
 
+        # Perform serialization
         serializer = TitlesSerializer(titles, many=True)
 
         return Response({"titles": serializer.data, "total_pages": total_pages})
     except Exception as e:  # Handle other exceptions
+        return Response(
+            {"error": f"An error occurred: {e}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["GET"])
+def get_genres(request):
+    try:
+        serializer = GenreSerializer(Genre.objects.all(), many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        # Handle other exceptions
+        return Response(
+            {"error": f"An error occurred: {e}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["GET"])
+def get_years(request):
+    try:
+        # Query distinct years from the release_date field
+        distinct_years = (
+            Title.objects.annotate(year=ExtractYear("release_date"))
+            .values("year")
+            .distinct()
+            .order_by("-year")
+        )
+
+        # Extract the years from the query result
+        years = [item["year"] for item in distinct_years]
+
+        return Response(years)
+    except Exception as e:
         return Response(
             {"error": f"An error occurred: {e}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -11,6 +11,8 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("create-user/", views.create_user),
     # Application
+    path("get-genres/", views.get_genres),
+    path("get-years/", views.get_years),
     path("get-titles/", views.get_titles),
     path("get-titles/<int:title_id>", views.get_title),
     path("create-review/", views.create_review),
