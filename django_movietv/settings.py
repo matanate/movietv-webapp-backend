@@ -85,8 +85,12 @@ WSGI_APPLICATION = "django_movietv.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DATABASE_NAME"),
+        "USER": os.environ.get("DATABASE_USER"),
+        "PASSWORD": os.environ.get("DATABASE_PASSWORD"),
+        "HOST": "db",  # Name of the PostgreSQL service in docker-compose.yml
+        "PORT": 5432,  # Default port for PostgreSQL
     }
 }
 
