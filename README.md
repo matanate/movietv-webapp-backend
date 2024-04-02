@@ -43,6 +43,7 @@ pip install -r requirements.txt
   ```
   TMDB_API_KEY
   ```
+- DJANGO_SECRET_KEY
 
 5. Configure Django settings:
 
