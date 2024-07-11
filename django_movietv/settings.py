@@ -28,7 +28,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["34.68.95.131", "atemdb.atedgimatan.com", "atedgimatan.com"]
 
 
 # Application definition
@@ -94,6 +94,12 @@ DATABASES = {
     }
 }
 
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": "mydatabase.db.sqlite3",
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators

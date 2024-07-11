@@ -32,6 +32,10 @@ API_HEADERS = {
     "Authorization": f"Bearer {TMDB_API_KEY}",
 }
 
+# TMDB API URLs
+URL_MOVIE_GENRES = "https://api.themoviedb.org/3/genre/movie/list?language=en"
+URL_TV_GENRES = "https://api.themoviedb.org/3/genre/tv/list?language=en"
+
 
 User = get_user_model()
 
@@ -255,18 +259,13 @@ def edit_review(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAdminUser])
 def get_tmdb_search(request):
-    # TMDB API URLs
-    URL_MOVIE_GENRES = "https://api.themoviedb.org/3/genre/movie/list?language=en"
-    URL_TV_GENRES = "https://api.themoviedb.org/3/genre/tv/list?language=en"
 
     # Fetching movie and TV genres from TMDB API
     try:
         movie_genres = requests.get(URL_MOVIE_GENRES, headers=API_HEADERS).json()[
             "genres"
         ]
-        tv_genres = requests.get(URL_TV_GENRES, headers=API_HEADERS).json()[
-            "genres"
-        ]
+        tv_genres = requests.get(URL_TV_GENRES, headers=API_HEADERS).json()["genres"]
 
         # Populate or create Genre instances
         for genre in movie_genres + tv_genres:
