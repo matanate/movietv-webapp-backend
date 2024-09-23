@@ -1,8 +1,7 @@
-import itertools
-from django.db import models
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
 from django.contrib.auth import get_user_model
+from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 User = get_user_model()
 
@@ -24,7 +23,7 @@ class Title(models.Model):
     )
     title = models.CharField(max_length=200, unique=False, null=False)
     release_date = models.DateField(unique=False, null=False)
-    overview = models.CharField(max_length=1000, unique=False, null=False)
+    overview = models.TextField(max_length=1000, unique=False, null=False)
     img_url = models.CharField(max_length=1000, unique=False, null=False)
     movie_or_tv = models.CharField(
         max_length=20,
@@ -54,8 +53,8 @@ class Title(models.Model):
 class Review(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
     rating = models.FloatField(unique=False, null=False, default=0.0)
-    comment = models.CharField(max_length=200, unique=False, null=False)
-    date_posted = models.DateTimeField(unique=False, null=False)
+    comment = models.TextField(max_length=200, unique=False, null=False)
+    date_posted = models.DateTimeField(unique=False, null=False, auto_now_add=True)
     title = models.ForeignKey(
         Title, on_delete=models.CASCADE, null=False, related_name="reviews"
     )
@@ -73,6 +72,15 @@ class Genre(models.Model):
 
     def __str__(self):
         return self.genre_name
+
+
+class ValidationToken(models.Model):
+    email = models.EmailField()
+    token = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Password reset token for user: {self.user.username}"
 
 
 # Listen for the post_save event to update average ratings

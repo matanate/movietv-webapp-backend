@@ -17,3 +17,6 @@ rest-framework-simplejwt==0.0.2
 sqlparse==0.4.4
 tzdata==2024.1
 urllib3==2.2.1
+django-filter==24.2
+inflection==0.5.1
+google-auth==2.32.0

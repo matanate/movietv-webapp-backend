@@ -10,53 +10,44 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
-from pathlib import Path
-from datetime import timedelta
 import os
-
+from datetime import timedelta
+from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
-ALLOWED_HOSTS = ["34.68.95.131", "atemdb.atedgimatan.com", "atedgimatan.com"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "app.apps.AppConfig",
-    "users.apps.UsersConfig",
-    "rest_framework",
-    "rest_framework_simplejwt.token_blacklist",
-    "corsheaders",
+    "django.contrib.admin",  # Django admin
+    "django.contrib.auth",  # Django authentication system
+    "django.contrib.contenttypes",  # Django content types
+    "django.contrib.sessions",  # Django sessions
+    "django.contrib.messages",  # Django messages framework
+    "django.contrib.staticfiles",  # Django static files
+    "app.apps.AppConfig",  # Your app
+    "users.apps.UsersConfig",  # Users app
+    "rest_framework",  # Django REST framework
+    "rest_framework_simplejwt.token_blacklist",  # JWT token blacklist
+    "corsheaders",  # Django CORS headers
+    "django_filters",  # Django filters
 ]
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.security.SecurityMiddleware",  # Django security middleware
+    "corsheaders.middleware.CorsMiddleware",  # Django CORS middleware
+    "django.middleware.common.CommonMiddleware",  # Django common middleware
+    "django.contrib.sessions.middleware.SessionMiddleware",  # Django sessions middleware
+    "django.middleware.common.CommonMiddleware",  # Django common middleware
+    "django.middleware.csrf.CsrfViewMiddleware",  # Django CSRF middleware
+    "django.contrib.auth.middleware.AuthenticationMiddleware",  # Django authentication middleware
+    "django.contrib.messages.middleware.MessageMiddleware",  # Django messages middleware
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",  # Django clickjacking middleware
+    "app.api.middleware.CaseConversionMiddleware",  # Your custom middleware
 ]
 
 ROOT_URLCONF = "django_movietv.urls"
@@ -64,7 +55,7 @@ ROOT_URLCONF = "django_movietv.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": ["templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -83,23 +74,6 @@ WSGI_APPLICATION = "django_movietv.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DATABASE_NAME"),
-        "USER": os.environ.get("DATABASE_USER"),
-        "PASSWORD": os.environ.get("DATABASE_PASSWORD"),
-        "HOST": "db",  # Name of the PostgreSQL service in docker-compose.yml
-        "PORT": 5432,  # Default port for PostgreSQL
-    }
-}
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "mydatabase.db.sqlite3",
-    }
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -122,11 +96,12 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+    ),
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=20),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=2),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -138,7 +113,7 @@ SIMPLE_JWT = {
     "JSON_ENCODER": None,
     "JWK_URL": None,
     "LEEWAY": 0,
-    "AUTH_HEADER_TYPES": ("Token",),
+    "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
@@ -180,14 +155,32 @@ STATIC_URL = "/django-static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Custom user model
 AUTH_USER_MODEL = "users.CustomUser"
 
+# CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Security settings
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 SECURE_SSL_REDIRECT = False
-FORCE_SCRIPT_NAME = "/backend"
+
+# Email settings
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST")
+EMAIL_PORT = os.environ.get("EMAIL_PORT")
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+
+SITE_ID = 1
+
+REST_USE_JWT = True
+
+# Google OAuth settings
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
