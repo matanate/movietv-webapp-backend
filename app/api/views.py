@@ -273,7 +273,7 @@ class ReviewViewSet(BaseViewSet):
         elif self.action in [
             "destroy",
         ]:  # DELETE action
-            permission_classes = [IsCurrentUser, IsAdminUser]
+            permission_classes = [IsAdminUser | IsCurrentUser]
         else:
             permission_classes = [
                 IsAuthenticated
