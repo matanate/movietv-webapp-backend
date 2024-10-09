@@ -189,9 +189,14 @@ class TitleViewSet(BaseViewSet):
         """
         # Handle exceptions
         try:
-            return super().create(request, *args, **kwargs)
+            response = super().create(request, *args, **kwargs)
+            return response
+        
         except IntegrityError as e:
             return Response({"error": "Title already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        except AuthenticationFailed as e:
+            return Response({"error": "Authentication credentials were not provided."}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             print(f"Error during create: {str(e)}")
@@ -217,8 +222,7 @@ class TitleViewSet(BaseViewSet):
                 IsAdminUser
             ]  # Default to Admin users for other actions
         return [permission() for permission in permission_classes]
-
-
+ 
 class ReviewViewSet(BaseViewSet):
     """
     A viewset for managing reviews.
@@ -328,7 +332,6 @@ class ReviewViewSet(BaseViewSet):
         try:
             return super().create(request, *args, **kwargs)
         except Exception as e:
-            print(f"Error during create: {"\n".join(e.args)}")
             return Response({"error": f"{"\n".join(e.args)}"}, status=status.HTTP_400_BAD_REQUEST)
 
     # on patch set date_posted to current datetime
@@ -353,7 +356,6 @@ class ReviewViewSet(BaseViewSet):
             request.data["date_posted"] = timezone.now()
             return super().partial_update(request, *args, **kwargs)
         except Exception as e:
-            print(f"Error during update: {e}")
             return Response({"error": f"{"\n".join(e.args)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -592,13 +594,20 @@ class PasswordResetViewSet(viewsets.ViewSet):
                 status=status.HTTP_200_OK,
             )
         # Handle exceptions
-        except Exception as e:
-            print(f"Error during reset password: {str(e)}")
-            return Response(
-                {"error": f"{"\n".join(e.args)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        except ValidationError as e:
+            error_strings = "\n".join(
+            error for key, error_list in e.detail.items() for error in error_list
             )
 
+            return Response(
+                {"error": error_strings},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValidationToken.DoesNotExist as e:
+            return Response(
+               {"error": f"{"\n".join(e.args)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 class AuthViewSet(viewsets.ViewSet):
     """
@@ -735,4 +744,3 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 user.save()                
 
         return super().handle_exception(exc)
-
