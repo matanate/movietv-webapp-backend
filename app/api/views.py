@@ -18,11 +18,13 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import (action, api_view,
                                        authentication_classes,
                                        permission_classes)
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .filters import CustomOrdering, GenreFilter, ReviewFilter, TitleFilter
 from .pagination import CustomPagination
@@ -654,3 +656,83 @@ class AuthViewSet(viewsets.ViewSet):
             return Response(
                 {"error": f"{"\n".join(e.args)}"}, status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    Custom token obtain pair view.
+    
+    Methods:
+    - post: Overrides the default token obtain pair view to handle failed login attempts.
+    - handle_exception: Handles exceptions raised during the token obtain process.
+    """
+
+    def post(self, request, *args, **kwargs):
+        """
+        Overrides the default token obtain pair view to handle failed login attempts.
+
+        This method overrides the default token obtain pair view to check if the account is locked
+        before proceeding with the normal token obtain process. If the account is locked, it raises
+        an AuthenticationFailed exception. If the account is not locked, it resets the failed
+        attempts if the token obtain is successful.
+
+        Parameters:
+        - request: The HTTP request object.
+        - *args: Variable length argument list.
+        - **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+        - Response: The HTTP response object containing the access and refresh tokens.
+
+        Raises:
+        - AuthenticationFailed: If the account is locked due to multiple failed login attempts.
+        """
+        user = User.objects.filter(email=request.data.get('email')).first()
+
+        if user:
+            # Check if the account is locked
+            if user.is_locked and user.lock_until and user.lock_until > timezone.now():
+                raise AuthenticationFailed("Your account has been locked due to multiple failed login attempts.")
+
+            # Proceed with the normal token obtain process
+            response = super().post(request, *args, **kwargs)
+            
+            # If successful, reset failed attempts
+            user.reset_failed_attempts()
+            return response
+        
+        return super().post(request, *args, **kwargs)
+
+    def handle_exception(self, exc):
+        """
+        Handles exceptions raised during the token obtain process.
+
+        If the exception is an InvalidToken exception, it checks if the account is locked
+        due to multiple failed login attempts. If the account is not locked, it increments
+        the failed attempts if the login failed. If the failed attempts reach the maximum
+        allowed, it locks the account. It appends a message to the error string indicating 
+        the remaining attempts or if the account is locked.
+
+        Parameters:
+        - exc: The exception object.
+
+        Returns:
+        - Response: The HTTP response object containing the error message.
+        """
+        if isinstance(exc, AuthenticationFailed):
+            email = self.request.data.get('email')
+            user = User.objects.filter(email=email).first()
+
+            if user:
+                # Increment failed attempts if login failed
+                user.failed_login_attempts += 1
+                remaining_attempts = settings.MAX_FAILED_LOGIN_ATTEMPTS - user.failed_login_attempts
+                if remaining_attempts == 0:
+                    user.lock_account()
+                if user.is_locked:
+                    exc.detail = "Your account has been locked due to multiple failed login attempts."
+
+                user.save()                
+
+        return super().handle_exception(exc)
+

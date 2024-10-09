@@ -132,7 +132,7 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
-
+MAX_FAILED_LOGIN_ATTEMPTS = 5
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
