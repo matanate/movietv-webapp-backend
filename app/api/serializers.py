@@ -74,7 +74,11 @@ class ReviewsSerializer(serializers.ModelSerializer):
         """
         Return the author's initials.
         """
-        return f"{obj.author.first_name[0].upper()}{obj.author.last_name[0].upper()}"
+        first_initial = (
+            obj.author.first_name[0].upper() if obj.author.first_name else ""
+        )
+        last_initial = obj.author.last_name[0].upper() if obj.author.last_name else ""
+        return f"{first_initial}{last_initial}"
 
     class Meta:
         model = Review
