@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Get the user model
 User = get_user_model()
@@ -184,12 +183,16 @@ class ConfirmValidationSerializer(serializers.Serializer):
             raise serializers.ValidationError("No token provided.")
         if not email:
             raise serializers.ValidationError("No email provided.")
+        # Check if the email is valid
+        if not User.objects.filter(email=email).exists():
+            raise serializers.ValidationError("Invalid email.")
         # Check if the token is valid
+        token_exists = ValidationToken.objects.filter(token=token).exists()
+        if not token_exists:
+            raise serializers.ValidationError("Invalid or expired token.")
         token_entry = ValidationToken.objects.get(token=token)
-        if (
-            token_entry.email != email
-            or not token_entry
-            or token_entry.created_at < (timezone.now() - timedelta(minutes=3))
+        if token_entry.email != email or token_entry.created_at < (
+            timezone.now() - timedelta(minutes=3)
         ):
             raise serializers.ValidationError("Invalid or expired token.")
         return data
