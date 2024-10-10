@@ -374,6 +374,8 @@ class GenreViewSet(BaseViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     filterset_class = GenreFilter
+    # set default ordering
+    ordering = ["-id"]
 
     def get_permissions(self):
         """
