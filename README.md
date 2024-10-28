@@ -1,14 +1,34 @@
 ### MovieTV App Backend
 
+#### Version: v2.1.0
+
 #### Overview
 
 This Django-based backend serves as the API for the MovieTV app, now enhanced with viewsets, Google login/signup features, and email verification for signup and password reset. It provides RESTful endpoints for various functionalities, including user authentication, title management, review creation, and integration with the TMDB API for title data retrieval.
 
 The backend utilizes JWT authentication with the `rest_framework_simplejwt` library, allowing users to obtain and refresh authentication tokens securely. Additionally, Google OAuth integration enables streamlined user authentication and profile management.
 
+A user lock mechanism has been added to the authentication flow. If a user exceeds the maximum number of allowed failed login attempts, their account will be locked temporarily, improving security.
+
+Comprehensive tests have been implemented for app models and views to ensure reliability and catch potential issues early.
+
 The project is organized into multiple Django apps, each handling specific aspects of the application, such as user management (`users` app), API endpoints (`app` app), and project configuration (`django_movietv`). The backend is designed to be flexible, supporting PostgreSQL or SQLite3 as the database backend, and uses environment variables for configuration, including database credentials and the TMDB API key.
 
 **Note**: The app includes middleware that automatically converts between camel case (used by the frontend) and snake case (used by the backend), ensuring seamless integration between the two.
+
+#### New Features (v2.1.0)
+
+- User Lock Mechanism: After a predefined number of failed login attempts, users are temporarily locked out of their account to prevent unauthorized access.
+
+- Bug Fix: Incorrect permissions assignment for review deletion.
+
+- Improve Error handling.
+
+- Testing: Unit tests have been added for both models and views, ensuring that the application behaves as expected. The test suite can be run with the following command:
+
+```bash
+python manage.py test
+```
 
 #### Installation and Setup
 
@@ -37,13 +57,13 @@ The project is organized into multiple Django apps, each handling specific aspec
    ```bash
    DJANGO_SECRET_KEY=<your-secret-key>
    TMDB_API_KEY=<your-tmdb-api-key>
-   DJANGO_SETTINGS_MODULE=django_movietv.dev_settings  # or prod_settings.py for production
+   DJANGO_SETTINGS_MODULE=django_movietv.dev_settings  # or django_movietv.test_settings for testing or prod_settings.py for production
    GOOGLE_CLIENT_ID=<your-google-client-id>
-   EMAIL_HOST=<your-email-host>
-   EMAIL_PORT=<your-email-port>
-   EMAIL_HOST_USER=<your-email-host-user>
-   DEFAULT_FROM_EMAIL=<your-default-from-email>
-   EMAIL_HOST_PASSWORD=<your-email-host-password>
+   EMAIL_HOST=<your-email-host> # for production
+   EMAIL_PORT=<your-email-port> # for production
+   EMAIL_HOST_USER=<your-email-host-user> # for production
+   DEFAULT_FROM_EMAIL=<your-default-from-email> # for production
+   EMAIL_HOST_PASSWORD=<your-email-host-password> # for production
    ```
 
    - Export environment variables for development:
@@ -56,6 +76,7 @@ The project is organized into multiple Django apps, each handling specific aspec
 
    - For development, use `django_movietv.dev_settings`.
    - For production, use `django_movietv.prod_settings`.
+   - For testing, use `django_movietv.test_settings`.
 
 6. Set `ALLOWED_HOSTS`:
 

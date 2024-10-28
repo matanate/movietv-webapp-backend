@@ -80,7 +80,7 @@ class ValidationToken(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Password reset token for user: {self.user.username}"
+        return f"Password reset token for user: {self.email}"
 
 
 # Listen for the post_save event to update average ratings

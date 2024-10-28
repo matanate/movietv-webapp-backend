@@ -1,8 +1,10 @@
 from datetime import datetime
 
 from django.db.models import Case, F, FloatField, Q, Value, When
+from django.utils import timezone
 from django_filters.rest_framework import CharFilter, Filter, FilterSet
 from rest_framework import filters
+from rest_framework.exceptions import ValidationError
 
 from ..models import Genre, Review, Title
 
@@ -34,7 +36,11 @@ class CustomOrdering(filters.OrderingFilter):
     def filter_queryset(self, request, queryset, view):
         # Retrieve the ordering parameter and search term from the request
         ordering = request.query_params.get(self.ordering_param)
+        if ordering:
+            ordering = ordering.lower()
         search_term = request.query_params.get("search")
+        if search_term:
+            search_term = search_term.lower()
 
         # Determine the ordering direction
         order_direction = ""
@@ -71,6 +77,12 @@ class CustomOrdering(filters.OrderingFilter):
 
             return queryset
 
+        # raise an error if invalid ordering parameter is provided
+        if ordering and ordering not in [
+            field[0] for field in self.get_valid_fields(queryset, view)
+        ]:
+            raise ValidationError(f"Invalid ordering parameter: {ordering}")
+
         # If no specific ordering or search term is provided, fallback to default ordering
         return super().filter_queryset(request, queryset, view)
 
@@ -91,16 +103,60 @@ class YearRangeFilter(Filter):
         >>> queryset = filter.filter(queryset, "2000,2020")
     """
 
+    def __init__(self, min_value=None, max_value=None, **kwargs):
+        self.min_value = min_value
+        self.max_value = max_value
+        super().__init__(**kwargs)
+
     def filter(self, qs, value):
-        if value:
-            start_year, end_year = value.split(",")
-            start_date = datetime(int(start_year), 1, 1)
-            end_date = datetime(int(end_year), 12, 31, 23, 59, 59)
-            return qs.filter(
-                Q(**{f"{self.field_name}__gte": start_date})
-                & Q(**{f"{self.field_name}__lte": end_date})
+        if not value:
+            return qs
+
+        # Parse and validate input
+        year_range = value.replace(" ", "").split(",")
+        if len(year_range) != 2:
+            raise ValidationError(
+                "Invalid year range format. Expected 'startYear,endYear'"
             )
-        return qs
+
+        try:
+            start_year, end_year = map(int, year_range)
+        except ValueError:
+            raise ValidationError("Both year range values must be integers")
+
+        current_year = timezone.now().year
+        if start_year > end_year:
+            raise ValidationError("Start year must be less than or equal to end year")
+        if not (0 <= start_year <= current_year) or not (0 <= end_year <= current_year):
+            raise ValidationError(
+                "Years must be positive and less than or equal to the current year"
+            )
+
+        # Validate against min and max constraints if defined
+        if (self.min_value is not None and start_year < self.min_value) or (
+            self.max_value is not None and end_year > self.max_value
+        ):
+            raise ValidationError(
+                f"The year range must be between {self.min_value} and {self.max_value}"
+            )
+        if self.min_value is not None and start_year < self.min_value:
+            raise ValidationError(
+                f"The start year must be greater than or equal to {self.min_value}"
+            )
+        if self.max_value is not None and end_year > self.max_value:
+            raise ValidationError(
+                f"The end year must be less than or equal to {self.max_value}"
+            )
+
+        # Create date range
+        start_date = datetime(start_year, 1, 1)
+        end_date = datetime(end_year, 12, 31, 23, 59, 59)
+
+        # Apply filter
+        return qs.filter(
+            Q(**{f"{self.field_name}__gte": start_date})
+            & Q(**{f"{self.field_name}__lte": end_date})
+        )
 
 
 class RangeFilter(Filter):
@@ -120,13 +176,48 @@ class RangeFilter(Filter):
         >>> filtered_qs = filter.filter(qs, "4,8")
     """
 
+    def __init__(self, min_value=None, max_value=None, **kwargs):
+        self.min_value = min_value
+        self.max_value = max_value
+        super().__init__(**kwargs)
+
     def filter(self, qs, value):
-        if value:
-            min_value, max_value = value.split(",")
-            return qs.filter(**{f"{self.field_name}__gte": min_value}) & qs.filter(
-                **{f"{self.field_name}__lte": max_value}
+        if not value:
+            return qs
+
+        # Clean and split input
+        _range = value.replace(" ", "").split(",")
+        if len(_range) != 2:
+            raise ValidationError("Invalid range format, must be 'start,end'")
+
+        try:
+            _start, _end = map(int, _range)
+        except ValueError:
+            raise ValidationError("Both Range values must be integers")
+
+        if _start > _end:
+            raise ValidationError("Start range must be less than or equal to end range")
+
+        # Validate against min and max constraints if defined
+        if (self.min_value is not None and _start < self.min_value) or (
+            self.max_value is not None and _end > self.max_value
+        ):
+            raise ValidationError(
+                f"The range must be between {self.min_value} and {self.max_value}"
             )
-        return qs
+        if self.min_value is not None and _start < self.min_value:
+            raise ValidationError(
+                f"The start range must be greater than or equal to {self.min_value}"
+            )
+        if self.max_value is not None and _end > self.max_value:
+            raise ValidationError(
+                f"The end range must be less than or equal to {self.max_value}"
+            )
+
+        # Apply the filter
+        return qs.filter(
+            **{f"{self.field_name}__gte": _start, f"{self.field_name}__lte": _end}
+        )
 
 
 class TitleFilter(FilterSet):
@@ -151,7 +242,7 @@ class TitleFilter(FilterSet):
     year_range = YearRangeFilter(
         field_name="release_date", label="Year Range (YYYY,YYYY)"
     )
-    rating_range = RangeFilter(field_name="rating")
+    rating_range = RangeFilter(field_name="rating", min_value=0, max_value=10)
     genres = CharFilter(method="filter_genres")
 
     class Meta:
@@ -196,8 +287,17 @@ class TitleFilter(FilterSet):
         Returns:
             QuerySet: The filtered queryset.
         """
-        # value is a list of genre ids separated by commas
-        genre_ids = value.split(",")
+        if not value:
+            return queryset
+
+        # Parse, validate, and convert genre IDs in one step
+        try:
+            genre_ids = [int(_id.replace(" ", "")) for _id in value.split(",")]
+        except ValueError:
+            raise ValidationError(
+                "Invalid genre IDs. Please provide a comma-separated list of integers."
+            )
+
         return queryset.filter(genres__id__in=genre_ids).distinct()
 
 
@@ -253,4 +353,14 @@ class GenreFilter(FilterSet):
         Returns:
             The filtered queryset based on the genre IDs.
         """
-        return queryset.filter(id__in=value.split(","))
+        if not value:
+            return queryset
+
+        # Parse, validate, and convert genre IDs in one step
+        try:
+            genre_ids = [int(_id.replace(" ", "")) for _id in value.split(",")]
+        except ValueError:
+            raise ValidationError(
+                "Invalid genre IDs. Please provide a comma-separated list of integers."
+            )
+        return queryset.filter(id__in=genre_ids)

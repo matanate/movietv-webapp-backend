@@ -1,4 +1,5 @@
 from datetime import timedelta
+from venv import create
 
 from app.models import Genre, Review, Title, ValidationToken
 from django.contrib.auth import get_user_model
@@ -33,7 +34,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """
     Serializer for the User model.
+    Includes token validation and user creation.
     """
+
+    # make the token write only for new record
+    token = serializers.CharField(
+        write_only=True, required=False
+    )  # Token as a write-only field
 
     class Meta:
         model = User
@@ -45,8 +52,54 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "is_staff",
             "password",
+            "token",
         ]
-        extra_kwargs = {"password": {"write_only": True}}
+        extra_kwargs = {
+            "password": {
+                "write_only": True,
+                "required": False,
+            },  # Password required only for create
+            "token": {"write_only": True, "required": False},
+        }
+
+    def validate(self, data):
+        """
+        Validate the token and email provided in the request data.
+        """
+        if self.instance is None:  # Only for creation (when instance is not provided)
+            token = data.get("token")
+            email = data.get("email")
+            password = data.get("password")
+            if not token:
+                raise serializers.ValidationError("Token is required.")
+            if not email:
+                raise serializers.ValidationError("Email is required.")
+            if not password:
+                raise serializers.ValidationError("Password is required.")
+
+            # Validate token existence, expiration and match with email
+            token_entry = ValidationToken.objects.filter(
+                token=token,
+                email=email,
+                created_at__gte=timezone.now() - timedelta(minutes=3),
+            ).first()
+            if not token_entry:
+                raise serializers.ValidationError("Invalid or expired token.")
+
+        # Token is valid, continue with user creation
+        return data
+
+    def create(self, validated_data):
+        # Remove the token from validated_data, as it's only for validation
+        validated_data.pop("token")
+
+        # Create the user
+        user = User.objects.create_user(**validated_data)
+
+        # Invalidate or delete the token after successful creation
+        ValidationToken.objects.filter(email=user.email).delete()
+
+        return user
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -137,6 +190,14 @@ class TitlesSerializer(serializers.ModelSerializer):
 
         return title_instance
 
+    def validate(self, attrs):
+        # Add the ID to the validated data if it's present in the initial data
+        if "id" in self.initial_data:
+            attrs["id"] = self.initial_data["id"]
+            if Title.objects.filter(id=attrs["id"]).exists():
+                raise serializers.ValidationError("Title already exists.")
+        return super().validate(attrs)
+
 
 class ValidationSerializer(serializers.Serializer):
     """
@@ -183,9 +244,6 @@ class ConfirmValidationSerializer(serializers.Serializer):
             raise serializers.ValidationError("No token provided.")
         if not email:
             raise serializers.ValidationError("No email provided.")
-        # Check if the email is valid
-        if not User.objects.filter(email=email).exists():
-            raise serializers.ValidationError("Invalid email.")
         # Check if the token is valid
         token_exists = ValidationToken.objects.filter(token=token).exists()
         if not token_exists:
@@ -219,4 +277,13 @@ class PasswordResetSerializer(serializers.Serializer):
             raise serializers.ValidationError("No token provided.")
         if not email:
             raise serializers.ValidationError("No email provided.")
+        # Check if the token is valid
+        token_exists = ValidationToken.objects.filter(token=token).exists()
+        if not token_exists:
+            raise serializers.ValidationError("Invalid or expired token.")
+        token_entry = ValidationToken.objects.get(token=token)
+        if token_entry.email != email or token_entry.created_at < (
+            timezone.now() - timedelta(minutes=3)
+        ):
+            raise serializers.ValidationError("Invalid or expired token.")
         return data

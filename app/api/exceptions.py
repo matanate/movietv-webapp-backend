@@ -21,8 +21,8 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
         # if data contain details and the value is an ErrorDetail deconstruct to strings
         if isinstance(response.data, str):
             error_payload["error"] = response.data
-        else:
-            for details in response.data.values():
+        elif isinstance(response.data, list):
+            for details in response.data:
                 if isinstance(details, list):
                     error_payload["error"] = ", ".join(
                         [detail.title() for detail in details]
@@ -30,7 +30,27 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
                 elif isinstance(details, ErrorDetail):
                     error_payload["error"] = details.title()
                 elif isinstance(details, str):
-                    error_payload["error"] = details
+                    error_payload["error"] = details.title()
+        else:
+            for key, details in response.data.items():
+                if isinstance(details, list):
+                    error_payload["error"] = ", ".join(
+                        [detail.title() for detail in details]
+                    )
+                elif isinstance(details, ErrorDetail):
+                    error_payload["error"] = details.title()
+                elif isinstance(details, str):
+                    error_payload["error"] = details.title()
 
+                # check if the error contains "Field" in it and if so replace with the key
+
+                if "This Field" in error_payload["error"]:
+                    error_payload["error"] = error_payload["error"].replace(
+                        "This Field", key.title().replace("_", " ")
+                    )
+                elif "Field" in error_payload["error"]:
+                    error_payload["error"] = error_payload["error"].replace(
+                        "Field", key.title().replace("_", " ")
+                    )
         response.data = error_payload
     return response

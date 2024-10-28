@@ -153,6 +153,8 @@ class TestTitleViewSet(BaseTestViewSet):
     - Creating a title without authentication
     - Creating a title as a non-staff user
     - Creating a title as a staff user
+    - Creating a duplicate title
+    - Creating a title with invalid data
     - Updating a title without authentication
     - Updating a title as a non-staff user
     - Updating a title as a staff user
@@ -241,6 +243,191 @@ class TestTitleViewSet(BaseTestViewSet):
         self.assertEqual(new_title.overview, "This is a new movie.")
         self.assertEqual(new_title.img_url, "http://example.com/new_movie.jpg")
         self.assertEqual(new_title.movie_or_tv, "movie")
+
+    def test_title_viewset_create_duplicate(self):
+        """Test case for creating a duplicate title.
+
+        This test case tests that a 400 status code is returned when
+        a duplicate title is created.
+        """
+        data = {
+            "id": self.title.id,
+            "title": "Movie",
+            "releaseDate": "2022-01-01",
+            "overview": "This is an movie.",
+            "imgUrl": "http://example.com/movie.jpg",
+            "movieOrTv": "movie",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual("Title Already Exists.", response.data["error"])
+
+    def test_title_viewset_create_without_title(self):
+        """Test case for creating a title without a title.
+
+        This test case tests that a 400 status code is returned when
+        a title is created without a title.
+        """
+        data = {
+            "releaseDate": "2022-01-01",
+            "overview": "This is an movie.",
+            "imgUrl": "http://example.com/movie.jpg",
+            "movieOrTv": "movie",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual("Title Is Required.", response.data["error"])
+
+    def test_title_viewset_create_without_release_date(self):
+        """Test case for creating a title without a release date.
+
+        This test case tests that a 400 status code is returned when
+        a title is created without a release date.
+        """
+        data = {
+            "title": "Movie",
+            "overview": "This is an movie.",
+            "imgUrl": "http://example.com/movie.jpg",
+            "movieOrTv": "movie",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual("Release Date Is Required.", response.data["error"])
+
+    def test_title_viewset_create_without_movie_or_tv(self):
+        """Test case for creating a title without a movie or tv.
+
+        This test case tests that a 400 status code is returned when
+        a title is created without a movie or tv.
+        """
+        data = {
+            "title": "Movie",
+            "releaseDate": "2022-01-01",
+            "overview": "This is an movie.",
+            "imgUrl": "http://example.com/movie.jpg",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual("Movie Or Tv Is Required.", response.data["error"])
+
+    def test_title_viewset_create_without_overview(self):
+        """Test case for creating a title without an overview.
+
+        This test case tests that a 400 status code is returned when
+        a title is created without an overview.
+        """
+        data = {
+            "title": "Movie",
+            "releaseDate": "2022-01-01",
+            "imgUrl": "http://example.com/movie.jpg",
+            "movieOrTv": "movie",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual("Overview Is Required.", response.data["error"])
+
+    def test_title_viewset_create_without_img_url(self):
+        """Test case for creating a title without an image URL.
+
+        This test case tests that a 400 status code is returned when
+        a title is created without an image URL.
+        """
+        data = {
+            "title": "Movie",
+            "releaseDate": "2022-01-01",
+            "overview": "This is an movie.",
+            "movieOrTv": "movie",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual("Img Url Is Required.", response.data["error"])
+
+    def test_title_viewset_create_invalid_date(self):
+        """Test case for creating a title with invalid data.
+
+        This test case tests that a 400 status code is returned when
+        an invalid releaseDate value is provided.
+        """
+        data = {
+            "title": "Movie",
+            "releaseDate": "invalid_date",
+            "overview": "This is an movie.",
+            "imgUrl": "http://example.com/movie.jpg",
+            "movieOrTv": "movie",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            "Date Has Wrong Format. Use One Of These Formats Instead: Yyyy-Mm-Dd.",
+            response.data["error"],
+        )
+
+    def test_title_viewset_create_invalid_movie_or_tv(self):
+        """Test case for creating a title with invalid data.
+
+        This test case tests that a 400 status code is returned when
+        an invalid movieOrTv value is provided.
+        """
+        data = {
+            "title": "Movie",
+            "releaseDate": "2022-01-01",
+            "overview": "This is an movie.",
+            "imgUrl": "http://example.com/movie.jpg",
+            "movieOrTv": "invalid",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('"Invalid" Is Not A Valid Choice.', response.data["error"])
+
+    def test_title_viewset_create_invalid_genres(self):
+        """Test case for creating a title with invalid genres.
+
+        This test case tests that a 400 status code is returned when
+        an invalid genre value is provided.
+        """
+        data = {
+            "title": "Movie",
+            "releaseDate": "2022-01-01",
+            "overview": "This is an movie.",
+            "imgUrl": "http://example.com/movie.jpg",
+            "movieOrTv": "movie",
+            "genres": "invalid",
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            'Expected A List Of Items But Got Type "Str".', response.data["error"]
+        )
+
+    def test_title_viewset_create_genre_not_exist(self):
+        """Test case for creating a title with genres that do not exist.
+
+        This test case tests that a 400 status code is returned when
+        an invalid genre value is provided.
+        """
+        data = {
+            "title": "Movie",
+            "releaseDate": "2022-01-01",
+            "overview": "This is an movie.",
+            "imgUrl": "http://example.com/movie.jpg",
+            "movieOrTv": "movie",
+            "genres": [10, 15],
+        }
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            'Invalid Pk "10" - Object Does Not Exist.', response.data["error"]
+        )
 
     def test_title_viewset_update_without_token(self):
         """
@@ -362,18 +549,29 @@ class TestTitleViewSet(BaseTestViewSet):
         """
         Test case for retrieving a title without authentication.
 
-        This test case tests that a 401 status code is returned when
+        This test case tests that a 200 status code is returned when
         a title is retrieved without authentication.
         """
         self.client.credentials()  # Remove token
         response = self.client.get(self.detail_url(pk=self.title.pk))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_title_viewset_detail_not_found(self):
+        """Test case for retrieving a title that does not exist.
+
+        This test case tests that a 404 status code is returned when
+        a title is retrieved that does not exist.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+        response = self.client.get(self.detail_url(pk=9999))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual("Not Found.", response.data["error"])
+
     def test_title_viewset_list_without_token(self):
         """
         Test case for listing titles without authentication.
 
-        This test case tests that a 401 status code is returned when
+        This test case tests that a 200 status code is returned when
         titles are listed without authentication.
         """
         self.client.credentials()  # Remove token
@@ -498,6 +696,41 @@ class TestTitleViewSetFilters(BaseTestViewSet):
         self.assertEqual(response.data["results"][1]["title"], "Action Tv")  # Rating 3
         self.assertEqual(response.data["results"][2]["title"], "Comedy Tv")  # Rating 2
 
+    def test_filter_by_rating_range_invalid_format(self):
+        response = self.client.get(self.list_url, {"ratingRange": "invalid"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], "Invalid Range Format, Must Be 'Start,End'"
+        )
+
+    def test_filter_by_rating_range_not_integers(self):
+        response = self.client.get(self.list_url, {"ratingRange": "a,b"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Both Range Values Must Be Integers")
+
+    def test_filter_by_rating_range_min_greater_than_max(self):
+        response = self.client.get(self.list_url, {"ratingRange": "5,4"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"],
+            "Start Range Must Be Less Than Or Equal To End Range",
+        )
+
+    def test_filter_by_rating_range_max_out_of_range(self):
+        response = self.client.get(self.list_url, {"ratingRange": "5,11"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "The Range Must Be Between 0 And 10")
+
+    def test_filter_by_rating_range_min_out_of_range(self):
+        response = self.client.get(self.list_url, {"ratingRange": "-1,1"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "The Range Must Be Between 0 And 10")
+
+    def test_filter_by_rating_range_min_and_max_out_of_range(self):
+        response = self.client.get(self.list_url, {"ratingRange": "-1,11"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "The Range Must Be Between 0 And 10")
+
     def test_filter_by_year_range(self):
         response = self.client.get(self.list_url, {"yearRange": "1990,1991"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -507,6 +740,44 @@ class TestTitleViewSetFilters(BaseTestViewSet):
             response.data["results"][0]["title"], "Comedy Movie"
         )  # Rating 4
         self.assertEqual(response.data["results"][1]["title"], "Action Tv")  # Rating 3
+
+    def test_filter_by_year_range_invalid_format(self):
+        response = self.client.get(self.list_url, {"yearRange": "invalid"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"],
+            "Invalid Year Range Format. Expected 'Startyear,Endyear'",
+        )
+
+    def test_filter_by_year_range_not_integers(self):
+        response = self.client.get(self.list_url, {"yearRange": "a,b"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], "Both Year Range Values Must Be Integers"
+        )
+
+    def test_filter_by_year_range_start_greater_than_end(self):
+        response = self.client.get(self.list_url, {"yearRange": "1991,1990"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], "Start Year Must Be Less Than Or Equal To End Year"
+        )
+
+    def test_filter_by_year_range_start_out_of_range(self):
+        response = self.client.get(self.list_url, {"yearRange": "-1,1991"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"],
+            "Years Must Be Positive And Less Than Or Equal To The Current Year",
+        )
+
+    def test_filter_by_year_range_end_out_of_range(self):
+        response = self.client.get(self.list_url, {"yearRange": "1990,2025"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"],
+            "Years Must Be Positive And Less Than Or Equal To The Current Year",
+        )
 
     def test_order_by_title(self):
         response = self.client.get(self.list_url, {"orderBy": "title"})
@@ -542,17 +813,49 @@ class TestTitleViewSetFilters(BaseTestViewSet):
         self.assertEqual(response.data["results"][2]["title"], "Action Movie")  # 1992
         self.assertEqual(response.data["results"][3]["title"], "Comedy Tv")  # 1993
 
+    def test_order_by_invalid_field(self):
+        """
+        Test that an invalid order by field returns an error
+        """
+        response = self.client.get(self.list_url, {"orderBy": "invalid"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Invalid Ordering Parameter: Invalid")
+
     def test_pagination_page_size(self):
         response = self.client.get(self.list_url, {"pageSize": 2})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 2)
         self.assertEqual(response.data["count"], 4)
 
+    def test_pagination_page_size_all(self):
+        response = self.client.get(self.list_url, {"pageSize": "all"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 4)
+        self.assertEqual(response.data["count"], 4)
+
+    def test_pagination_page_size_invalid(self):
+        """
+        Test that an invalid page size returns an error
+        """
+        response = self.client.get(self.list_url, {"pageSize": "invalid"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], 'Page Size Must Be An Integer Or "All"'
+        )
+
     def test_pagination_page(self):
         response = self.client.get(self.list_url, {"pageSize": 2, "page": 2})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 2)
         self.assertEqual(response.data["count"], 4)
+
+    def test_pagination_page_invalid(self):
+        """
+        Test that an invalid page number returns an error
+        """
+        response = self.client.get(self.list_url, {"pageSize": 2, "page": "invalid"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["error"], "Invalid Page.")
 
     def test_pagination_page_out_of_range(self):
         response = self.client.get(self.list_url, {"pageSize": 2, "page": 3})
@@ -869,7 +1172,7 @@ class TestReviewViewSet(BaseTestViewSet):
         response = self.client.post(self.list_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
-            "You have already reviewed this title. You can only review each title once.",
+            "You Have Already Reviewed This Title. You Can Only Review Each Title Once.",
             response.data["error"],
         )
 
@@ -1013,6 +1316,321 @@ class TestReviewViewSet(BaseTestViewSet):
         )
 
 
+class TestUserViewSet(BaseTestViewSet):
+    """
+    Tests for the UserViewSet class.
+    """
+
+    url_name = "user"
+
+    def test_create_user_valid_token(self):
+        """
+        Test creating a new user with a valid token.
+        """
+        # Create a validation token for the user
+        token_entry = ValidationToken.objects.create(
+            email="newuser@example.com", token="validtoken"
+        )
+
+        # User creation data with the token
+        data = {
+            "email": "newuser@example.com",
+            "username": "newuser",
+            "password": "newpassword123",
+            "token": "validtoken",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user is created successfully
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["email"], "newuser@example.com")
+
+        # Ensure the token is deleted after creation
+        self.assertFalse(ValidationToken.objects.filter(token="validtoken").exists())
+
+    def test_create_user_invalid_token(self):
+        """
+        Test creating a new user with an invalid token.
+        """
+        # User creation data with an invalid token
+        data = {
+            "email": "newuser@example.com",
+            "username": "newuser",
+            "password": "newpassword123",
+            "token": "invalidtoken",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Invalid Or Expired Token.")
+
+    def test_create_user_expired_token(self):
+        """
+        Test creating a new user with an expired token.
+        """
+        # Create a validation token for the user
+        token_entry = ValidationToken.objects.create(
+            email="newuser@example.com",
+            token="expiredtoken",
+        )
+        token_entry.created_at -= timedelta(minutes=3)
+        token_entry.save()
+
+        # User creation data with an expired token
+        data = {
+            "email": "newuser@example.com",
+            "username": "newuser",
+            "password": "newpassword123",
+            "token": "expiredtoken",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Invalid Or Expired Token.")
+
+    def test_create_user_no_token(self):
+        """
+        Test creating a new user without a token.
+        """
+        # User creation data without a token
+        data = {
+            "email": "newuser@example.com",
+            "username": "newuser",
+            "password": "newpassword123",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Token Is Required.")
+
+    def test_create_user_no_password(self):
+        """
+        Test creating a new user without a password.
+        """
+        # Create a validation token for the user
+        token_entry = ValidationToken.objects.create(
+            email="newuser@example.com", token="validtoken"
+        )
+
+        # User creation data without a password
+        data = {
+            "token": "validtoken",
+            "email": "newuser@example.com",
+            "username": "newuser",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Password Is Required.")
+
+    def test_create_user_no_email(self):
+        """
+        Test creating a new user without an email.
+        """
+        # User creation data without an email
+        data = {
+            "username": "newuser",
+            "password": "newpassword123",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Email Is Required.")
+
+    def test_create_user_invalid_email(self):
+        """
+        Test creating a new user with an invalid email.
+        """
+        # User creation data with an invalid email
+        data = {
+            "email": "invalidemail",
+            "username": "newuser",
+            "password": "newpassword123",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Enter A Valid Email Address.")
+
+    def test_create_user_existing_email(self):
+        """
+        Test creating a new user with an existing email.
+        """
+        # User creation data with an existing email
+        data = {
+            "email": self.user.email,
+            "username": "newuser",
+            "password": "newpassword123",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "User With This Email Already Exists.")
+
+    def test_create_user_no_username(self):
+        """
+        Test creating a new user without a username.
+        """
+        # User creation data without a username
+        data = {
+            "email": "newuser@example.com",
+            "password": "newpassword123",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Username Is Required.")
+
+    def test_create_user_invalid_username(self):
+        """
+        Test creating a new user with an invalid username.
+        """
+        # Create a validation token for the user
+        token_entry = ValidationToken.objects.create(
+            email="newuser@example.com", token="validtoken"
+        )
+        # User creation data with an invalid username
+        data = {
+            "token": "validtoken",
+            "email": "newuser@example.com",
+            "username": "invalidusername$",
+            "password": "newpassword123",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"],
+            "Enter A Valid Username. This Value May Contain Only Letters, Numbers, And @/./+/-/_ Characters.",
+        )
+
+    def test_create_user_existing_username(self):
+        """
+        Test creating a new user with an existing username.
+        """
+        # User creation data with an existing username
+        data = {
+            "email": "newuser@example.com",
+            "username": self.user.username,
+            "password": "newpassword123",
+        }
+
+        # Make POST request to create the user
+        response = self.client.post(self.list_url, data)
+
+        # Assert that user creation fails
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], "A User With That Username Already Exists."
+        )
+
+    def test_update_user_as_current_user(self):
+        """
+        Test updating the user's own information.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+        data = {"username": "updateduser"}
+
+        response = self.client.patch(self.detail_url(self.user.id), data)
+
+        # Assert that update is successful
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], "updateduser")
+
+    def test_update_user_as_other_user(self):
+        """
+        Test that a user cannot update another user's information.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.other_access_token}")
+        data = {"username": "updateduser"}
+
+        response = self.client.patch(self.detail_url(self.user.id), data)
+
+        # Assert that update is forbidden
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.data["error"], "You Do Not Have Permission To Perform This Action."
+        )
+
+    def test_retrieve_user_as_admin(self):
+        """
+        Test retrieving user details as an admin.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+
+        response = self.client.get(self.detail_url(self.user.id))
+
+        # Assert that retrieve is successful
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["email"], "testuser@example.com")
+
+    def test_retrieve_user_as_other_user(self):
+        """
+        Test that a user cannot retrieve another user's details.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.other_access_token}")
+
+        response = self.client.get(self.detail_url(self.user.id))
+
+        # Assert that retrieve is forbidden
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.data["error"], "You Do Not Have Permission To Perform This Action."
+        )
+
+    def test_delete_user_as_admin(self):
+        """
+        Test deleting a user as an admin.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_access_token}")
+
+        response = self.client.delete(self.detail_url(self.user.id))
+
+        # Assert that delete is successful
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=self.user.id).exists())
+
+    def test_delete_user_as_non_admin(self):
+        """
+        Test that a non-admin user cannot delete another user.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.other_access_token}")
+
+        response = self.client.delete(self.detail_url(self.user.id))
+
+        # Assert that delete is forbidden
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
 class TestValidationViewSet(APITestCase):
     """
     Test cases for validation token creation and sending email.
@@ -1122,7 +1740,7 @@ class TestPasswordResetViewSet(APITestCase):
         cls.user = User.objects.create_user(
             email="testuser@example.com", password="password123", username="testuser"
         )
-        cls.url_name = "password-reset"
+        cls.url_name = "password_reset"
         cls.list_url = reverse(f"{cls.url_name}-list")
         cls.detail_url = lambda *args, **kwargs: f"{cls.url_name}-detail"
 
@@ -1183,7 +1801,7 @@ class TestPasswordResetViewSet(APITestCase):
         response = self.client.post(self.list_url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Invalid or expired token.", response.data["error"])
+        self.assertIn("Invalid Or Expired Token.", response.data["error"])
 
     def test_reset_password_with_invalid_email(self):
         """
@@ -1201,7 +1819,7 @@ class TestPasswordResetViewSet(APITestCase):
         response = self.client.post(self.list_url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Invalid email.", response.data["error"])
+        self.assertIn("Email Not Found.", response.data["error"])
 
     def test_reset_password_with_short_password(self):
         """
@@ -1220,7 +1838,7 @@ class TestPasswordResetViewSet(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(
-            "Ensure this field has at least 8 characters.", response.data["error"]
+            "Ensure New Password Has At Least 8 Characters.", response.data["error"]
         )
 
 
@@ -1306,14 +1924,14 @@ class TestAuthViewSet(APITestCase):
         This test case tests that a 400 status code is returned when
         a user is logged in with an invalid token.
         """
-        mock_verify_token.side_effect = ValueError("Invalid token")
+        mock_verify_token.side_effect = ValueError("Invalid Credentials")
 
         data = {"credential": "invalid_credential"}
 
         response = self.client.post(self.url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"], "Invalid Credentials")
 
 
 class CustomTokenObtainPairViewTests(APITestCase):
@@ -1425,7 +2043,7 @@ class CustomTokenObtainPairViewTests(APITestCase):
         self.assertEqual(response.status_code, 401)  # Unauthorized
         self.assertEqual(
             response.data["error"],
-            "Your account has been locked due to multiple failed login attempts.",
+            "Your Account Has Been Locked Due To Multiple Failed Login Attempts.",
         )
 
     def test_login_succeeds_after_lock_expires(self):

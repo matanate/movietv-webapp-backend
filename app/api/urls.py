@@ -16,7 +16,7 @@ router.register(r"validation", views.ValidationViewSet, basename="validation")
 router.register(
     r"password-reset",
     views.PasswordResetViewSet,
-    basename="password-reset",
+    basename="password_reset",
 )
 router.register(r"auth", views.AuthViewSet, basename="auth")
 
